@@ -184,26 +184,25 @@ void keyboard(unsigned char key, int x, int y) {
 
 // Function to create the menu
 void createMenu() {
-    int stationaryMenu = glutCreateMenu([](int option) {
+    // Create submenu for electron movement options
+    int electronMovementSubMenu = glutCreateMenu([](int option) {
         if (option == 1) {
-            electronsMoving = false;
+            electronsMoving = false; // Set electrons to stationary
+        } else if (option == 2) {
+            electronsMoving = true;  // Set electrons to moving
         }
     });
-    glutAddMenuEntry("Stationary", 1);
+    glutAddMenuEntry("Stable", 1); // Option to make electrons stationary
+    glutAddMenuEntry("Move", 2);   // Option to make electrons move
 
-    int movingMenu = glutCreateMenu([](int option) {
-        if (option == 2) {
-            electronsMoving = true;
-        }
-    });
-    glutAddMenuEntry("Moving", 2);
+    // Create the main menu and attach the submenu to it
+    glutCreateMenu([](int option) {});
+    glutAddSubMenu("Electron Movement", electronMovementSubMenu);
 
-    int mainMenu = glutCreateMenu([](int option) {});
-    glutAddSubMenu("Electron State", stationaryMenu);
-    glutAddSubMenu("Electron Movement", movingMenu);
-
-    glutAttachMenu(GLUT_RIGHT_BUTTON); // Attach the menu to the right mouse button
+    // Attach the main menu to the right mouse button
+    glutAttachMenu(GLUT_RIGHT_BUTTON);
 }
+
 
 // Main function
 int main(int argc, char** argv) {
