@@ -9,8 +9,8 @@ int width = 800;
 int height = 600;
 
 // Atom characteristics
-float nucleusRadius = 0.1f;
-float electronRadius = 0.05f;
+float nucleusRadius = 0.2f;
+float electronRadius = 0.07f;
 float baseOrbitRadius = 1.0f; // Adjusted for visibility
 
 // Electron configuration for each shell
@@ -45,9 +45,12 @@ unsigned long lastInputTime = 0;
 unsigned long lastDigitTime = 0;
 const unsigned long inputDelay = 2000; // 2 seconds delay for each digit
 
+// Global variable to track electron movement state
+bool electronsMoving = false;
+
 // Function to initialize OpenGL settings
 void init() {
-    glClearColor(0.0, 0.0, 0.0, 1.0); // Background color (black)
+    glClearColor(1.0, 1.0, 1.0, 1.0); // Background color (black)
     glEnable(GL_DEPTH_TEST);          // Enable depth testing for 3D rendering
     glEnable(GL_COLOR_MATERIAL);
     glEnable(GL_LIGHTING);
@@ -59,6 +62,17 @@ void init() {
 void drawSphere(float radius, float r, float g, float b) {
     glColor3f(r, g, b); // Set the color
     glutSolidSphere(radius, 50, 50); // Draw the sphere
+}
+
+// Function to draw an orbit as a thin line
+void drawOrbit(float radius) {
+    glColor3f(0.5, 0.5, 0.5); // Gray color for the orbit
+    glBegin(GL_LINE_LOOP);
+    for (int i = 0; i < 100; ++i) {
+        float angle = 2 * M_PI * i / 100;
+        glVertex2f(radius * cos(angle), radius * sin(angle));
+    }
+    glEnd();
 }
 
 // Function to draw text on the screen
@@ -77,9 +91,10 @@ void display() {
 
     // Fixed camera view (2D orthographic)
     glOrtho(-2.0, 2.0, -2.0, 2.0, -1.0, 1.0); // Set up an orthographic projection
-
+    
     // Draw the nucleus at the center
     glPushMatrix();
+    drawText(elementName, -0.3f, 0.3f);
     drawSphere(nucleusRadius, 1.0, 0.0, 0.0); // Red color for the nucleus
     glPopMatrix();
 
@@ -91,8 +106,16 @@ void display() {
     for (int shell = 0; shell < 7 && remainingElectrons > 0; shell++) {
         int electronsInThisShell = (remainingElectrons > maxElectronsInShells[shell]) ? maxElectronsInShells[shell] : remainingElectrons;
 
+        // Draw the orbital line
+        drawOrbit(currentOrbitRadius);
+
         for (int i = 0; i < electronsInThisShell; i++) {
-            float angle = time + (2 * M_PI / electronsInThisShell) * i;
+            float angle;
+            if (electronsMoving) {
+                angle = time * 0.9 + (2 * M_PI / electronsInThisShell) * i; // Speed up rotation
+            } else {
+                angle = (2 * M_PI / electronsInThisShell) * i; // Fixed position
+            }
             float x = currentOrbitRadius * cos(angle);
             float y = currentOrbitRadius * sin(angle);
 
@@ -103,12 +126,12 @@ void display() {
             glPopMatrix();
         }
 
-        currentOrbitRadius += 0.5f; // Increase orbit radius for next shell
+        currentOrbitRadius += 0.4f; // Increase orbit radius for next shell
         remainingElectrons -= electronsInThisShell;
     }
 
     // Draw element name
-    drawText(elementName, -1.5f, 1.5f); // Adjusted position for better visibility
+     // Adjusted position for better visibility
 
     glutSwapBuffers(); // Swap the buffers
 }
@@ -122,17 +145,9 @@ void reshape(int w, int h) {
     glMatrixMode(GL_MODELVIEW);                      // Switch back to modelview matrix
 }
 
-// Timer function to handle delay
-void timer(int value) {
-    if (inputInProgress) {
-        // Check if 2 seconds have passed since the last input
-        unsigned long currentTime = glutGet(GLUT_ELAPSED_TIME);
-        if (currentTime - lastInputTime >= inputDelay) {
-            // 2 seconds have passed, allow new input
-            inputInProgress = false;
-        }
-    }
-    glutTimerFunc(100, timer, 0); // Call timer function every 100ms
+// Function to handle idle state (called when no other events are pending)
+void idle() {
+    glutPostRedisplay(); // Request a redraw of the window
 }
 
 // Function to handle keyboard input
@@ -158,26 +173,36 @@ void keyboard(unsigned char key, int x, int y) {
 
         numElectrons = currentInputNumber;
 
-        // Set element name based on the atomic number
-        if (currentInputNumber > 0 && currentInputNumber <= 118) {
-            strcpy(elementName, elementNames[currentInputNumber - 1]);
-        } else {
-            strcpy(elementName, "Unknown");
-        }
+        // Set element name based on atomic number
+        strncpy(elementName, elementNames[numElectrons - 1], sizeof(elementName) - 1);
+        elementName[sizeof(elementName) - 1] = '\0'; // Ensure null-termination
 
-        lastInputTime = currentTime; // Update the time of last input
-        inputInProgress = true; // Start the delay period
-        glutPostRedisplay(); // Request a redraw
-    } else if (key == 'a' || key == 'A') { // Reset to Hydrogen
-        numElectrons = 1;
-        strcpy(elementName, "Hydrogen");
-        currentInputNumber = 1;
-        isInputtingNumber = false;
-        glutPostRedisplay(); // Request a redraw
-    } else if (key == 27) { // ESC key to reset input
-        isInputtingNumber = false;
-        currentInputNumber = 0;
+        printf("Element: %s, Atomic Number: %d\n", elementName, numElectrons);
+        lastInputTime = currentTime; // Update the last input time
     }
+}
+
+// Function to create the menu
+void createMenu() {
+    int stationaryMenu = glutCreateMenu([](int option) {
+        if (option == 1) {
+            electronsMoving = false;
+        }
+    });
+    glutAddMenuEntry("Stationary", 1);
+
+    int movingMenu = glutCreateMenu([](int option) {
+        if (option == 2) {
+            electronsMoving = true;
+        }
+    });
+    glutAddMenuEntry("Moving", 2);
+
+    int mainMenu = glutCreateMenu([](int option) {});
+    glutAddSubMenu("Electron State", stationaryMenu);
+    glutAddSubMenu("Electron Movement", movingMenu);
+
+    glutAttachMenu(GLUT_RIGHT_BUTTON); // Attach the menu to the right mouse button
 }
 
 // Main function
@@ -188,10 +213,11 @@ int main(int argc, char** argv) {
     glutCreateWindow("2D Atom Simulator");           // Create the window with title
 
     init();                                          // Initialize OpenGL settings
+    createMenu();                                    // Create the menu
     glutDisplayFunc(display);                        // Register display callback function
     glutReshapeFunc(reshape);                        // Register reshape callback function
     glutKeyboardFunc(keyboard);                      // Register keyboard callback function
-    glutTimerFunc(100, timer, 0);                    // Initialize timer
+    glutIdleFunc(idle);                              // Register idle callback function
     glutMainLoop();                                  // Enter the main event loop
     return 0;
 }
