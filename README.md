@@ -21,7 +21,7 @@ This is a mini project of computer graphics that demonstrates the simulation of 
 1. Clone the repository:
 
    ```
-   git clone https://github.com/your-username/OpenGL-AtomSimulator.git
+   git clone https://github.com/bkk31/OpenGL-AtomSimulator.git
    ```
 
 2. Build and run the program:
@@ -34,9 +34,9 @@ This is a mini project of computer graphics that demonstrates the simulation of 
 ## Usage
 
 1. Launch the program.
-2. Press a number key (0-9) to input the number of electrons in each shell.
+2. Press a number key (1-118) to input the atomic number.
 3. The program will display the name of the element based on the number of electrons.
-4. Press any key to exit the program.
+4. Use mouse buttons for the rotation of the electrons
 
 ## Contributing
 
