@@ -1,4 +1,3 @@
-
 # OpenGL-AtomSimulator
 
 This is a mini project of computer graphics that demonstrates the simulation of an atom's structure using OpenGL.
@@ -20,6 +19,7 @@ This is a mini project of computer graphics that demonstrates the simulation of 
 ### Installation
 
 1. Clone the repository:
+
    ```
    git clone https://github.com/your-username/OpenGL-AtomSimulator.git
    ```
@@ -50,4 +50,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - [OpenGL](https://www.opengl.org/)
 - [GLUT](https://www.opengl.org/resources/libraries/glut/)
-```
