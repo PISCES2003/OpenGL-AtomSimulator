@@ -48,9 +48,12 @@ const unsigned long inputDelay = 2000; // 2 seconds delay for each digit
 // Global variable to track electron movement state
 bool electronsMoving = false;
 
+// Global variable for error messages
+char errorMessage[50] = "";
+
 // Function to initialize OpenGL settings
 void init() {
-    glClearColor(1.0, 1.0, 1.0, 1.0); // Background color (black)
+    glClearColor(1.0, 1.0, 1.0, 1.0); // Background color (white)
     glEnable(GL_DEPTH_TEST);          // Enable depth testing for 3D rendering
     glEnable(GL_COLOR_MATERIAL);
     glEnable(GL_LIGHTING);
@@ -77,11 +80,40 @@ void drawOrbit(float radius) {
 
 // Function to draw text on the screen
 void drawText(const char *text, float x, float y) {
-    glColor3f(1.0, 1.0, 1.0); // Set text color to white
+    glColor3f(0.0, 0.0, 0.0); // Set text color to black
     glRasterPos2f(x, y);
     while (*text) {
         glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *text++);
     }
+}
+
+void subMenu(int option) {
+    // If the user selects option 1, stop the electrons from moving.
+    if (option == 1){
+        electronsMoving = false;
+    }
+    // If the user selects option 2, start the electrons moving.
+    if (option == 2) {
+        electronsMoving = true;
+    }
+    // Redisplay the OpenGL window to reflect the changes.
+    glutPostRedisplay();
+}
+
+
+void mainMenu(int option) {
+    // Switch statement to handle different menu options
+    // Option 1 does nothing, so we add a semicolon to not execute any code for this option.
+    if (option == 1) ;
+
+    // Option 2 exits the program.
+    // The exit() function is used to terminate the program with a status code of 0.
+    if (option == 2) {
+        // Exit the program.
+        exit(0);
+    }
+    // Redisplay the OpenGL window to reflect the changes.
+    glutPostRedisplay();
 }
 
 // Function to render the scene
@@ -130,8 +162,10 @@ void display() {
         remainingElectrons -= electronsInThisShell;
     }
 
-    // Draw element name
-     // Adjusted position for better visibility
+    // Draw error message if there is one
+    if (strlen(errorMessage) > 0) {
+        drawText(errorMessage, -0.5f, -0.5f); // Adjusted position for better visibility
+    }
 
     glutSwapBuffers(); // Swap the buffers
 }
@@ -155,68 +189,71 @@ void keyboard(unsigned char key, int x, int y) {
     if (key >= '0' && key <= '9') {
         unsigned long currentTime = glutGet(GLUT_ELAPSED_TIME);
         
-        // Check if delay period has elapsed since last digit input
-        if (currentTime - lastDigitTime < inputDelay && isInputtingNumber) {
-            // If not enough time has passed, consider it as part of the current number input
-            currentInputNumber = currentInputNumber * 10 + (key - '0');
-        } else {
-            // If enough time has passed, treat it as a new input
-            currentInputNumber = (key - '0');
+        if (key == 0) {
+            strncpy(errorMessage, "Invalid Input", sizeof(errorMessage) - 1);
+            errorMessage[sizeof(errorMessage) - 1] = '\0'; // Ensure null-termination
+            numElectrons = 0; // Reset or handle as needed
+            currentInputNumber = 0;
             isInputtingNumber = true;
+        } else {
+            if (currentTime - lastDigitTime < inputDelay && isInputtingNumber) {
+                currentInputNumber = currentInputNumber * 10 + (key - '0');
+            } else {
+                currentInputNumber = (key - '0');
+                isInputtingNumber = true;
+            }
+
+            lastDigitTime = currentTime;
+
+            if (currentInputNumber > 118) {
+                strncpy(errorMessage, "Invalid Input", sizeof(errorMessage) - 1);
+            errorMessage[sizeof(errorMessage) - 1] = '\0'; // Ensure null-termination
+            numElectrons = 0; // Reset or handle as needed
+            currentInputNumber = 0;
+            isInputtingNumber = true;
+            }
+
+            numElectrons = currentInputNumber;
+
+            if (numElectrons > 0) {
+                strncpy(elementName, elementNames[numElectrons - 1], sizeof(elementName) - 1);
+                elementName[sizeof(elementName) - 1] = '\0'; // Ensure null-termination
+                strncpy(errorMessage, "", sizeof(errorMessage)); // Clear error message
+            } else {
+                strncpy(elementName, "", sizeof(elementName)); // Clear element name
+                strncpy(errorMessage, "Invalid Input", sizeof(errorMessage) - 1);
+                errorMessage[sizeof(errorMessage) - 1] = '\0'; // Ensure null-termination
+            }
+
+            printf("Element: %s, Atomic Number: %d\n", elementName, numElectrons);
+            lastInputTime = currentTime;
         }
-        
-        lastDigitTime = currentTime; // Update the time of last digit input
-
-        if (currentInputNumber > 118) {
-            currentInputNumber = 118; // Limit to the maximum number of elements
-        }
-
-        numElectrons = currentInputNumber;
-
-        // Set element name based on atomic number
-        strncpy(elementName, elementNames[numElectrons - 1], sizeof(elementName) - 1);
-        elementName[sizeof(elementName) - 1] = '\0'; // Ensure null-termination
-
-        printf("Element: %s, Atomic Number: %d\n", elementName, numElectrons);
-        lastInputTime = currentTime; // Update the last input time
     }
 }
 
-// Function to create the menu
-void createMenu() {
-    // Create submenu for electron movement options
-    int electronMovementSubMenu = glutCreateMenu([](int option) {
-        if (option == 1) {
-            electronsMoving = false; // Set electrons to stationary
-        } else if (option == 2) {
-            electronsMoving = true;  // Set electrons to moving
-        }
-    });
-    glutAddMenuEntry("Stable", 1); // Option to make electrons stationary
-    glutAddMenuEntry("Move", 2);   // Option to make electrons move
-
-    // Create the main menu and attach the submenu to it
-    glutCreateMenu([](int option) {});
-    glutAddSubMenu("Electron Movement", electronMovementSubMenu);
-
-    // Attach the main menu to the right mouse button
-    glutAttachMenu(GLUT_RIGHT_BUTTON);
-}
-
-
-// Main function
 int main(int argc, char** argv) {
-    glutInit(&argc, argv);                           // Initialize GLUT
-    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH); // Double buffering, RGB color, depth buffer
-    glutInitWindowSize(width, height);               // Set the window size
-    glutCreateWindow("2D Atom Simulator");           // Create the window with title
+    glutInit(&argc, argv);                      // Initialize GLUT
+    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH); // Set display mode
+    glutInitWindowSize(width, height);          // Set window size
+    glutCreateWindow("Atom Visualization");     // Create the window
 
-    init();                                          // Initialize OpenGL settings
-    createMenu();                                    // Create the menu
-    glutDisplayFunc(display);                        // Register display callback function
-    glutReshapeFunc(reshape);                        // Register reshape callback function
-    glutKeyboardFunc(keyboard);                      // Register keyboard callback function
-    glutIdleFunc(idle);                              // Register idle callback function
-    glutMainLoop();                                  // Enter the main event loop
+    init();                                     // Initialize OpenGL settings
+  
+    glutDisplayFunc(display);                   // Register display callback
+    int SubMenu = glutCreateMenu(subMenu);
+    glutAddMenuEntry("Fixed", 1);
+    glutAddMenuEntry("Moving", 2);
+
+    // Create the main menu and add its options.
+    glutCreateMenu(mainMenu);
+    glutAddSubMenu("Movement", SubMenu);
+    glutAddMenuEntry("Exit", 2);
+     glutAttachMenu(GLUT_RIGHT_BUTTON);
+
+    glutReshapeFunc(reshape);                   // Register reshape callback
+    glutIdleFunc(idle);                        // Register idle callback
+    glutKeyboardFunc(keyboard);                 // Register keyboard callback
+
+    glutMainLoop();                             // Enter GLUT main loop
     return 0;
 }
